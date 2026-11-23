@@ -62,7 +62,7 @@ def make_handler(router):
             self.reply(200, (WEB / name).read_bytes(), mime)
 
         def do_POST(self):
-            if not self.valid_host() or self.headers.get("X-MotionLink-Token") != token:
+            if not self.valid_host() or self.headers.get("X-MotionCue-Token") != token:
                 return self.reply(403, {"error": "Invalid request token"})
             try:
                 length = int(self.headers.get("Content-Length", 0))

@@ -46,7 +46,7 @@ Other targets: `flash`, `monitor`, `menuconfig`, `size`, `clean`, `help`.
 `PORT`, `BAUD` (flash baud, default 460800), and `BUILD_DIR` can be overridden.
 Make is optional; EIM's Windows installation need not provide it.
 
-Expected serial output includes `MotionLink ESP32-S3: disarmed` and
+Expected serial output includes `Motion Cue ESP32-S3: disarmed` and
 `IMU driver is not configured; gesture control is disabled`. This is a
 bootable firmware scaffold, **not a functioning gesture controller yet**.
 

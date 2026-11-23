@@ -29,7 +29,7 @@ def main():
         client.tls_set()
     def connected(c, u, f, reason, props):
         if not reason.is_failure:
-            c.subscribe(f"motionlink/{config['device_id']}/telemetry", qos=0)
+            c.subscribe(f"motioncue/{config['device_id']}/telemetry", qos=0)
     def received(c, u, msg):
         try:
             if msg.retain or len(msg.payload) > 65536:

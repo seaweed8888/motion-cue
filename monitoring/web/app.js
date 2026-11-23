@@ -17,7 +17,7 @@ function render(state) {
 }
 async function post(path, body) {
   try {
-    const response = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json', 'X-MotionLink-Token':token}, body:JSON.stringify(body)});
+    const response = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json', 'X-MotionCue-Token':token}, body:JSON.stringify(body)});
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
     el('error').textContent = ''; render(data);

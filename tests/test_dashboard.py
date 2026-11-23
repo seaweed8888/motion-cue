@@ -24,7 +24,7 @@ def test_local_dashboard_and_mutation_token():
         with pytest.raises(HTTPError) as error:
             urlopen(Request(base+"/api/mappings",data=data))
         assert error.value.code==403
-        request=Request(base+"/api/mappings",data=data,headers={"X-MotionLink-Token":state["token"]})
+        request=Request(base+"/api/mappings",data=data,headers={"X-MotionCue-Token":state["token"]})
         with urlopen(request) as response:
             assert json.load(response)["mappings"]["swipe_right"]=="Space"
         with pytest.raises(HTTPError) as error:

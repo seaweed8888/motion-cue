@@ -1,5 +1,5 @@
-#include "motionlink.h"
-namespace motionlink {
+#include "motioncue.h"
+namespace motioncue {
 void Session::pulse(const std::string& session,const std::string& token,uint32_t now,
                     const std::string& command,bool armed) {
     if(session.empty() || token.empty() || session.size()>128 || token.size()>128)return;

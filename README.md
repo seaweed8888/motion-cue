@@ -1,4 +1,4 @@
-# MotionLink (working title)
+# Motion Cue
 
 ESP32-S3 gesture controller for Windows presentations. Twist arms/disarms;
 swipes send mapped presentation keys. Project files follow [handoff.md](handoff.md).

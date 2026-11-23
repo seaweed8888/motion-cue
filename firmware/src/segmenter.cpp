@@ -1,6 +1,6 @@
-#include "motionlink.h"
+#include "motioncue.h"
 #include <cmath>
-namespace motionlink {
+namespace motioncue {
 bool Segmenter::push(const Sample& s) {
     if(!std::isfinite(s.t) || (initialized && s.t<=previous)) { *this=Segmenter{}; return false; }
     for(float x:s.axis) if(!std::isfinite(x)) { *this=Segmenter{}; return false; }

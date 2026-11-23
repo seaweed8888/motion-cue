@@ -1,6 +1,6 @@
-# MotionLink — Project Handoff
+# Motion Cue — Project Handoff
 
-Updated: November 23, 2026. MotionLink is a working title, not a confirmed final name.
+Updated: November 23, 2026. The project name is Motion Cue.
 
 ## Purpose and current status
 
@@ -134,7 +134,7 @@ This deployed forest performs inference only. Retraining, model correction inter
 
 ## MQTT contract and connection behavior
 
-Proposed topic prefix: `motionlink/<device_id>/`.
+Proposed topic prefix: `motioncue/<device_id>/`.
 
 | Topic suffix | Publisher | Contents |
 |---|---|---|
@@ -168,7 +168,7 @@ Show device/host connection state, actual armed/disarmed state, last recognized 
 ## Repository layout
 
 ```text
-MotionLink/
+Motion Cue/
     README.md
     handoff.md
     LICENSE

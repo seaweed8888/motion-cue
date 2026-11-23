@@ -1,8 +1,8 @@
-#include "motionlink.h"
+#include "motioncue.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
-namespace motionlink {
+namespace motioncue {
 Features features(const std::vector<Sample>& s) {
     if(s.size()<3) throw std::invalid_argument("At least 3 samples required");
     for(size_t i=0;i<s.size();++i) {

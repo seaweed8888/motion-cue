@@ -29,7 +29,7 @@ class Simulator:
 
     def connected(self,c,u,f,reason,p):
         if not reason.is_failure:
-            c.subscribe(f"motionlink/{self.device}/control",0)
+            c.subscribe(f"motioncue/{self.device}/control",0)
             self.publish("status")
 
     def disconnected(self,*args):
@@ -44,7 +44,7 @@ class Simulator:
                 session=self.session,lease=self.lease,armed=self.armed,online=True,
                 command_id=self.command_id,model_version="MANUAL-FIXTURE",synthetic=True)
             if gesture:doc["gesture"]=gesture
-            self.client.publish(f"motionlink/{self.device}/{kind}",json.dumps(doc),qos=0,retain=False)
+            self.client.publish(f"motioncue/{self.device}/{kind}",json.dumps(doc),qos=0,retain=False)
 
     def control(self,c,u,msg):
         try:

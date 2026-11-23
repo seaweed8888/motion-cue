@@ -16,7 +16,7 @@ def export(artifact, output):
     output.parent.mkdir(parents=True, exist_ok=True)
     model.save(file=str(output), name="gesture_model")
     with output.open("a") as f:
-        f.write(f'\n#define MOTIONLINK_MODEL_READY 1\n#define MOTIONLINK_THRESHOLD {artifact["threshold"]}f\n')
+        f.write(f'\n#define MOTIONCUE_MODEL_READY 1\n#define MOTIONCUE_THRESHOLD {artifact["threshold"]}f\n')
     output.with_suffix(".json").write_text(json.dumps(dict(feature_version=FEATURE_VERSION,
         feature_count=FEATURE_COUNT, synthetic=artifact["synthetic"], leaf_bits=8, dtype="float",
         threshold=artifact["threshold"]), indent=2))

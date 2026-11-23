@@ -13,16 +13,16 @@ def test_segmentation_and_mode(tmp_path):
     expected = list(segment(samples))
     assert len(expected)==1
     executable=compile_cpp(tmp_path, '''
-#include "motionlink.h"
+#include "motioncue.h"
 #include <cassert>
 #include <iostream>
-int main(){motionlink::ControlMode m;assert(!m.gesture(1));assert(!m.gesture(3));
+int main(){motioncue::ControlMode m;assert(!m.gesture(1));assert(!m.gesture(3));
 assert(m.armed);assert(m.gesture(1));assert(!m.gesture(3));assert(!m.armed);
-motionlink::Session connection;connection.pulse("one","a",0);connection.mode.armed=true;
+motioncue::Session connection;connection.pulse("one","a",0);connection.mode.armed=true;
 connection.tick(1201);assert(!connection.mode.armed);assert(!connection.live);
 connection.pulse("two","b",1300,"stale-arm",true);assert(!connection.mode.armed);
-assert(motionlink::classify(motionlink::Features{})==0);
-motionlink::Segmenter s;motionlink::Sample r;int count=0;
+assert(motioncue::classify(motioncue::Features{})==0);
+motioncue::Segmenter s;motioncue::Sample r;int count=0;
 while(std::cin>>r.t){for(float& x:r.axis)std::cin>>x;if(s.push(r))++count;}
 std::cout<<count;}
 ''', ["firmware/src/segmenter.cpp","firmware/src/control_mode.cpp","firmware/src/mqtt_client.cpp",

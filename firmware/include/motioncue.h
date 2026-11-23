@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace motionlink {
+namespace motioncue {
 struct Sample { float t; std::array<float,6> axis; };
 using Features = std::array<float,55>;
 Features features(const std::vector<Sample>& samples);

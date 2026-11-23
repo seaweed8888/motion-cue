@@ -1,12 +1,12 @@
-#include "motionlink.h"
+#include "motioncue.h"
 #include "esp_log.h"
 
 extern "C" void app_main() {
-    constexpr const char* tag = "motionlink";
-    motionlink::Session session;
+    constexpr const char* tag = "motioncue";
+    motioncue::Session session;
     session.disconnect();
-    ESP_LOGI(tag, "MotionLink ESP32-S3: disarmed");
-    if (!motionlink::imu_begin()) {
+    ESP_LOGI(tag, "Motion Cue ESP32-S3: disarmed");
+    if (!motioncue::imu_begin()) {
         ESP_LOGW(tag, "IMU driver is not configured; gesture control is disabled");
         return;
     }

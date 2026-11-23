@@ -34,7 +34,7 @@ def test_training_evaluation_export_and_preprocess(tmp_path,monkeypatch):
     assert (tmp_path/"eval/confusion_matrix.png").exists()
     monkeypatch.setattr(sys,"argv",["export",str(model),"--output",str(tmp_path/"gesture_model.h"),"--allow-synthetic"])
     export_model.main()
-    assert "MOTIONLINK_MODEL_READY 1" in (tmp_path/"gesture_model.h").read_text()
+    assert "MOTIONCUE_MODEL_READY 1" in (tmp_path/"gesture_model.h").read_text()
     output=tmp_path/"segmented.json"
     monkeypatch.setattr(sys,"argv",["preprocess","data/sample/continuous.json","--output",str(output)])
     preprocess.main()

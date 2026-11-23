@@ -1,6 +1,6 @@
 # MQTT protocol v1
 
-One host, one device, prefix `motionlink/<device_id>/`. MQTT 3.1.1 clean sessions.
+One host, one device, prefix `motioncue/<device_id>/`. MQTT 3.1.1 clean sessions.
 All control/events/status use QoS 0 and retain=false; no command replay or queues.
 Lost events may be dropped rather than repeated. Firmware must serialize status
 and events on one connection with a strictly increasing `seq` for the whole boot.

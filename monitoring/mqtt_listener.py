@@ -6,7 +6,7 @@ import paho.mqtt.client as mqtt
 class Listener:
     def __init__(self, config, router):
         self.config, self.router = config, router
-        self.topic = f"motionlink/{router.device_id}/"
+        self.topic = f"motioncue/{router.device_id}/"
         self.stop_event = threading.Event()
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, clean_session=True)
         if config.get("username"):
