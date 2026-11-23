@@ -1,0 +1,7 @@
+numpy==2.5.5
+scikit-learn==1.9.1
+emlearn==0.23.2
+PyYAML==6.0.4
+matplotlib==3.11.2
+setuptools==84.2.1
+paho-mqtt==2.1.0

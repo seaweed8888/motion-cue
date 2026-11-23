@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.pio/
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+*.pyc
+*.log
+monitoring/config.json
+firmware/include/config.h
+data/raw/*
+data/processed/*
+models/**/*.pkl
+/graphify-out/
