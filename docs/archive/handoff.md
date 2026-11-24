@@ -1,5 +1,10 @@
 # Motion Cue — Project Handoff
 
+> Historical planning document from November 23, 2026. Its proposed file tree,
+> toolchain and implementation status describe that handoff, not the current
+> repository. Use the [project README](../../README.md) and
+> [documentation index](../README.md) for current instructions.
+
 Updated: November 23, 2026. The project name is Motion Cue.
 
 ## Purpose and current status

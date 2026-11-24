@@ -1,0 +1,65 @@
+/* Section headings carry the brand accent in every state. Readings stay gray
+   until active/live/powered; errors retain their separate red treatment. */
+QWidget { background: #F1F2F4; color: #41464D; font-family: "Segoe UI"; font-size: 13px; }
+QLabel#section { color: #AE3B20; font-size: 15px; font-weight: 600; }
+QLabel#muted, QLabel#modelState { color: #676B72; font-size: 12px; background: transparent; }
+QLabel#modelState[active="true"] { color: #AE3B20; }
+QLabel#prediction { color: #555B65; font-size: 46px; font-weight: 600; padding-top: 8px; }
+QLabel#prediction[active="true"] { color: #B7472A; }
+QLabel#angles { font-size: 13px; color: #555B65; padding: 7px; }
+QLabel#metric { color: #5B616B; font-size: 14px; font-weight: 600; background: transparent; }
+QLabel#metric[accent="true"] { color: #AE3B20; }
+QLabel#pill { background: #E4E6EB; border-radius: 11px; padding: 5px 11px; color: #555B65; font-size: 11px; }
+QLabel#pill[live="true"] { color: #A4371C; background: #FBECE5; }
+QLabel#error { color: #A12F20; font-size: 12px; }
+QFrame#divider { background: #E5E7EB; border: none; }
+QScrollArea { border: none; background: #FFFFFF; }
+QWidget#sidebarContent, QWidget#healthContent { background: #FFFFFF; }
+QWidget#sidebarContent QLabel, QWidget#healthContent QLabel { background: transparent; }
+QPushButton { border: 1px solid transparent; border-radius: 7px; background: transparent; color: #555B65; padding: 6px 10px; font-weight: 500; min-height: 18px; }
+QPushButton:hover { background: #E5E7EB; }
+QPushButton:pressed { background: #D9DCE2; }
+QPushButton:disabled { color: #969CA5; background: transparent; }
+QPushButton#primary { color: #FFFFFF; background: #C43E1C; padding: 7px 18px; }
+QPushButton#primary:hover { background: #AB3318; }
+QPushButton#primary:pressed { background: #922B15; }
+QPushButton#primary:disabled { color: #969CA5; background: #DDE0E5; }
+QPushButton#quiet { color: #62666D; background: transparent; font-size: 12px; }
+QPushButton#quiet:hover { background: #E5E7EB; }
+QPushButton#quiet[active="true"] { color: #AE3B20; background: #FBECE5; }
+QPushButton#quiet:disabled { color: #969CA5; }
+QLineEdit, QComboBox, QDoubleSpinBox { border: 1px solid #E1E3E7; border-radius: 7px; padding: 8px; background: #F8F9FA; color: #505660; selection-background-color: #DDE0E5; selection-color: #41464D; }
+QLineEdit:hover, QComboBox:hover, QDoubleSpinBox:hover { border-color: #B6BBC3; }
+QLineEdit { placeholder-text-color: #626A74; }
+QPushButton:focus, QLineEdit:focus, QComboBox:focus, QDoubleSpinBox:focus { border: 1px solid #666E7A; }
+QLineEdit:disabled, QComboBox:disabled { color: #969CA5; background: #EBEDF0; }
+QComboBox::drop-down { border: none; width: 26px; }
+QComboBox::down-arrow { image: url(@CHEVRON@); width: 10px; height: 6px; }
+QComboBox QAbstractItemView { background: #FFFFFF; selection-background-color: #E4E6EB; selection-color: #41464D; border: 1px solid #D9DCE2; }
+QDoubleSpinBox { padding-right: 10px; }
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width: 0px; height: 0px; border: none; }
+QDoubleSpinBox QLineEdit { border: none; border-radius: 0; background: transparent; padding: 0; }
+QScrollBar:vertical { width: 6px; background: transparent; margin: 2px; }
+QScrollBar::handle:vertical { background: #C8CDD4; border-radius: 2px; min-height: 28px; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollArea#sidebar, QWidget#sidebarContent { background: #E8EAED; }
+QWidget#sidebarContent QLabel { color: #505660; }
+QWidget#sidebarContent QLabel#section { color: #AE3B20; font-size: 17px; }
+QWidget#sidebarContent QFrame#divider { background: #CDD1D7; }
+QScrollArea#sidebar[powered="true"], QWidget#sidebarContent[powered="true"] { background: #C43E1C; }
+QWidget#sidebarContent[powered="true"] QLabel { color: #FFF7F1; }
+QWidget#sidebarContent[powered="true"] QLabel#section { color: #FFFFFF; }
+QWidget#sidebarContent[powered="true"] QLabel#muted { color: #FFECE4; }
+QWidget#sidebarContent[powered="false"] QLabel#modelState[active="true"] { color: #AE3B20; }
+QWidget#sidebarContent[powered="true"] QFrame#divider { background: #DE795E; }
+QWidget#sidebarContent[powered="true"] QLineEdit, QWidget#sidebarContent[powered="true"] QComboBox, QWidget#sidebarContent[powered="true"] QDoubleSpinBox { background: #FFF8F3; color: #722A1A; border-color: transparent; selection-background-color: #F4D6C9; selection-color: #722A1A; }
+QWidget#sidebarContent[powered="true"] QLineEdit { placeholder-text-color: #805F52; }
+QWidget#sidebarContent[powered="true"] QPushButton { color: #FFF7F1; }
+QWidget#sidebarContent[powered="true"] QPushButton:hover { background: #AE351B; }
+QWidget#sidebarContent[powered="true"] QPushButton#primary { color: #A53519; background: #FFFFFF; }
+QWidget#sidebarContent[powered="true"] QPushButton#primary:hover { background: #FFECE4; }
+QWidget#sidebarContent[powered="true"] QPushButton#primary:pressed { background: #F4D6C9; }
+QWidget#sidebarContent[powered="true"] QPushButton:disabled, QWidget#sidebarContent[powered="true"] QPushButton#primary:disabled { background: #DADDE2; color: #676E78; }
+QWidget#sidebarContent[powered="true"] QLineEdit:disabled, QWidget#sidebarContent[powered="true"] QComboBox:disabled { background: #DADDE2; color: #676E78; }
+QWidget#sidebarContent[powered="true"] QPushButton:focus { border-color: #FFFFFF; }
+QWidget#sidebarContent[powered="true"] QLineEdit:focus, QWidget#sidebarContent[powered="true"] QComboBox:focus, QWidget#sidebarContent[powered="true"] QDoubleSpinBox:focus { border-color: #6E2210; }

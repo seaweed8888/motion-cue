@@ -7,40 +7,53 @@ import numpy as np
 from .features import validate
 
 
-def segment(samples):
-    samples = validate(samples)
-    baseline = samples[0, 1:4].copy()
-    pre = deque()
-    state, onset, quiet, started, ended = "idle", None, None, 0, 0
-    window = []
-    for row in samples:
+class Segmenter:
+    def __init__(self, acceleration_onset=1.2, rotation_onset=.7):
+        self.acceleration_onset, self.rotation_onset = acceleration_onset, rotation_onset
+        self.baseline = None
+        self.pre = deque(maxlen=32)
+        self.state, self.onset, self.quiet = "idle", None, None
+        self.started = self.ended = 0
+        self.window = []
+
+    def push(self, row):
+        if self.baseline is None:
+            self.baseline = row[1:4].copy()
         t = float(row[0])
-        acceleration = np.linalg.norm(row[1:4]-baseline)
+        acceleration = np.linalg.norm(row[1:4]-self.baseline)
         rotation = np.linalg.norm(row[4:7])
-        moving = acceleration > 1.2 or rotation > 0.7
+        moving = acceleration > self.acceleration_onset or rotation > self.rotation_onset
         settled = acceleration < 0.6 and rotation < 0.35
-        if state == "idle":
-            baseline += np.float32(.02)*(row[1:4]-baseline)
-            pre.append(row.copy())
-            while pre and t-float(pre[0][0]) > .15:
-                pre.popleft()
-            onset = (t if onset is None else onset) if moving else None
-            if onset is not None and t-onset >= .04:
-                window, started, quiet, state = list(pre), t, None, "capturing"
-        elif state == "capturing":
-            window.append(row.copy())
-            quiet = (t if quiet is None else quiet) if settled else None
-            overlong = t-started >= 2.0 or len(window) >= 256
-            if overlong or (quiet is not None and t-quiet >= .2):
+        if self.state == "idle":
+            self.baseline += np.float32(.02)*(row[1:4]-self.baseline)
+            self.pre.append(row.copy())
+            while self.pre and t-float(self.pre[0][0]) > .15:
+                self.pre.popleft()
+            self.onset = (t if self.onset is None else self.onset) if moving else None
+            if self.onset is not None and t-self.onset >= .04:
+                self.window, self.started, self.quiet, self.state = list(self.pre), t, None, "capturing"
+        elif self.state == "capturing":
+            self.window.append(row.copy())
+            self.quiet = (t if self.quiet is None else self.quiet) if settled else None
+            overlong = t-self.started >= 2.0 or len(self.window) >= 256
+            if overlong or (self.quiet is not None and t-self.quiet >= .2):
+                self.state, self.ended, self.quiet = "wait", t, None
                 if not overlong:
-                    yield np.asarray(window, dtype=np.float32)
-                state, ended, quiet = "wait", t, None
+                    return np.asarray(self.window, dtype=np.float32)
         else:
-            baseline += np.float32(.02)*(row[1:4]-baseline)
-            quiet = (t if quiet is None else quiet) if settled else None
-            if quiet is not None and t-quiet >= .2 and t-ended >= .5:
-                state, onset, quiet = "idle", None, None
-                pre.clear()
+            self.baseline += np.float32(.02)*(row[1:4]-self.baseline)
+            self.quiet = (t if self.quiet is None else self.quiet) if settled else None
+            if self.quiet is not None and t-self.quiet >= .2 and t-self.ended >= .5:
+                self.state, self.onset, self.quiet = "idle", None, None
+                self.pre.clear()
+
+
+def segment(samples):
+    segmenter = Segmenter()
+    for row in validate(samples):
+        window = segmenter.push(row)
+        if window is not None:
+            yield window
 
 
 def load_recording(path):

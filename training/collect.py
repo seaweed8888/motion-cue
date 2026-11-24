@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+import sys
 import threading
 import time
 import uuid
@@ -9,19 +10,30 @@ import paho.mqtt.client as mqtt
 from .features import validate
 
 
+def read_key():
+    import msvcrt
+    return msvcrt.getwch().lower() if msvcrt.kbhit() else None
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--config", default="monitoring/config.example.json")
     p.add_argument("--user", required=True)
     p.add_argument("--session", required=True)
-    p.add_argument("--seconds", type=float, default=30)
+    p.add_argument("--seconds", type=float, help="Timed capture instead of interactive controls (max 300)")
     p.add_argument("--output", required=True)
     args = p.parse_args()
-    if not 0 < args.seconds <= 300:
+    if args.seconds is not None and not 0 < args.seconds <= 300:
         p.error("Capture duration must be between 0 and 300 seconds")
+    if args.seconds is None and (sys.platform != "win32" or not sys.stdin.isatty()):
+        p.error("Interactive capture requires a Windows terminal; use --seconds for timed capture")
+    output = Path(args.output)
+    if output.exists():
+        p.error(f"Output already exists: {output}")
     config = json.loads(Path(args.config).read_text())
     samples, metadata, failures = [], {}, []
     lock = threading.Lock()
+    state = "recording" if args.seconds is not None else "idle"
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     if config.get("username"):
         client.username_pw_set(config["username"], config.get("password"))
@@ -31,14 +43,16 @@ def main():
         if not reason.is_failure:
             c.subscribe(f"motioncue/{config['device_id']}/telemetry", qos=0)
     def received(c, u, msg):
-        try:
-            if msg.retain or len(msg.payload) > 65536:
-                raise ValueError("Retained/oversize telemetry")
-            doc = json.loads(msg.payload)
-            if doc["v"] != 1 or doc["device_id"] != config["device_id"]:
-                raise ValueError("Wrong telemetry version/device")
-            batch = validate(doc["samples"])
-            with lock:
+        with lock:
+            if state != "recording":
+                return
+            try:
+                if msg.retain or len(msg.payload) > 65536:
+                    raise ValueError("Retained/oversize telemetry")
+                doc = json.loads(msg.payload)
+                if doc["v"] != 1 or doc["device_id"] != config["device_id"]:
+                    raise ValueError("Wrong telemetry version/device")
+                batch = validate(doc["samples"])
                 meta = {k:doc[k] for k in ("boot_id", "sample_rate_hz", "units")}
                 if metadata and metadata != meta:
                     raise ValueError("Device restarted or metadata changed")
@@ -46,25 +60,97 @@ def main():
                 if samples and batch[0,0] <= samples[-1][0]:
                     raise ValueError("Nonmonotonic acquisition timestamps")
                 samples.extend(batch.tolist())
-        except (ValueError, KeyError, TypeError) as exc:
-            failures.append(str(exc))
+            except (ValueError, KeyError, TypeError) as exc:
+                if not failures:
+                    failures.append(str(exc))
+
+    def disconnected(*unused):
+        with lock:
+            if state == "recording" and not failures:
+                failures.append("MQTT disconnected during capture; discard and record again")
+
+    def save(number):
+        if failures or not samples:
+            raise ValueError(f"Capture invalid: {failures or 'no telemetry received'}")
+        doc = dict(metadata, user_id=args.user, session_id=args.session,
+                   recording_id=uuid.uuid4().hex, samples=samples, boundaries=[], synthetic=False)
+        path = output if number == 1 else output.with_name(f"{output.stem}-{number:03d}{output.suffix}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("x") as f:
+            json.dump(doc, f)
+        print(f"Saved {len(samples)} samples to {path}. Add labeled boundaries before preprocessing.")
+
     client.on_connect, client.on_message = connected, received
+    client.on_disconnect = disconnected
     client.connect(config["broker"], config.get("port",1883), 5)
     client.loop_start()
     try:
-        time.sleep(args.seconds)
+        if args.seconds is not None:
+            print(f"Session {args.session} - collecting for {args.seconds:g} seconds...")
+            time.sleep(args.seconds)
+            with lock:
+                state = "review"
+                save(1)
+            return
+        print(f"Session {args.session} | User {args.user}")
+        print("V start | C stop | S save stopped recording | X discard | Q quit (no Enter needed)")
+        print("Ready. Start telemetry on the device, then press V. Maximum recording: 300 seconds.")
+        number, started, last_count = 1, 0, -1
+        while True:
+            try:
+                time.sleep(.1)
+                key = read_key()
+            except KeyboardInterrupt:
+                key = "q"
+            with lock:
+                if state == "recording" and time.monotonic() - started >= 300:
+                    print("\n300-second limit reached; recording stopped for review.")
+                    key = "c"
+                if key == "v":
+                    if state != "idle":
+                        print("\nStop and save or discard the current recording first.")
+                    elif not client.is_connected():
+                        print("\nBroker offline. Waiting for connection; press V to retry.")
+                    else:
+                        state, started, last_count = "recording", time.monotonic(), -1
+                        print(f"\nRecording {number} started. C stop | X discard")
+                elif key == "c" and state == "recording":
+                    state = "review"
+                    print(f"\nSession {args.session} - {len(samples)} samples (recording {number}, stopped)")
+                    if failures:
+                        print(f"Invalid capture: {failures[0]}")
+                    print("S save | X discard")
+                elif key == "s" and state == "review":
+                    try:
+                        save(number)
+                    except (ValueError, OSError) as exc:
+                        print(f"Cannot save: {exc}. Recording kept; retry S or discard with X.")
+                    else:
+                        number += 1
+                        samples.clear()
+                        metadata.clear()
+                        failures.clear()
+                        state = "idle"
+                        print("Ready. V start | Q quit")
+                elif key == "x" and state != "idle":
+                    print(f"\nDiscarded recording {number} ({len(samples)} samples). No file saved.")
+                    samples.clear()
+                    metadata.clear()
+                    failures.clear()
+                    state = "idle"
+                    print("Ready. V start | Q quit")
+                elif key == "q":
+                    if state == "idle":
+                        break
+                    print("\nUnsaved recording kept. C stop, then S save; or X discard before quitting.")
+                if state == "recording" and len(samples) != last_count:
+                    last_count = len(samples)
+                    print(f"\rSession {args.session} - {last_count} samples (recording {number})", end="", flush=True)
     finally:
+        with lock:
+            state = "idle"
         client.disconnect()
         client.loop_stop()
-    if failures or not samples:
-        raise RuntimeError(f"Capture invalid: {failures or 'no telemetry received'}")
-    doc = dict(metadata, user_id=args.user, session_id=args.session,
-               recording_id=uuid.uuid4().hex, samples=samples, boundaries=[], synthetic=False)
-    path = Path(args.output)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("x") as f:
-        json.dump(doc, f)
-    print("Saved continuous recording. Add labeled boundaries before preprocessing.")
 
 
 if __name__ == "__main__":

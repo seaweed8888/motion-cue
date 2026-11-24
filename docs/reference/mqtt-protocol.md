@@ -43,6 +43,6 @@ publishers; use ACLs and TLS on networks that require it.
 
 Telemetry is collection-only, at most 64 KiB per batch, nonretained. Envelope:
 `v`, `device_id`, `boot_id`, `sample_rate_hz`, `units`, `samples`. Units and sample
-rows match feature_spec.md. Batch at least 3 samples. Acquisition timestamps
+rows match the [feature specification](feature-spec.md). Batch at least 3 samples. Acquisition timestamps
 must be strictly increasing across the entire recording. Collection must not
 silently bridge restarts or sample loss; inspect timing gaps before training.

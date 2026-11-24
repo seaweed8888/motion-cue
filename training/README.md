@@ -2,6 +2,12 @@
 
 Install training/requirements.txt. Run modules from the repository root.
 
+The native dashboard (`python monitoring/dashboard.py`) can also collect labeled
+takes from live telemetry. Enter user/session, choose one gesture type, then use
+Record, Stop, and Save take. It writes the same continuous JSON format under
+data/raw/ with a label boundary covering that take. Review boundaries before
+preprocessing. All takes sharing a user/session belong in the same split.
+
 Export settings follow the [emlearn tree documentation](https://emlearn.readthedocs.io/en/latest/tree_based_models.html).
 
 ```powershell
@@ -12,6 +18,35 @@ python -m training.evaluate models/baseline.pkl data/processed/events.json --spl
 python -m training.evaluate models/baseline.pkl data/processed/events.json --split test --output models/releases/v001
 python -m training.export_model models/baseline.pkl --output firmware/include/gesture_model.h
 ```
+
+The collector opens an interactive Windows terminal workflow by default. Keys
+work immediately, without Enter:
+
+```text
+Session day1 | User partner1
+V start | C stop | S save stopped recording | X discard | Q quit (no Enter needed)
+Ready. Start telemetry on the device, then press V. Maximum recording: 300 seconds.
+
+Recording 1 started. C stop | X discard
+Session day1 - 250 samples (recording 1)
+Session day1 - 250 samples (recording 1, stopped)
+S save | X discard
+```
+
+Press V to start receiving samples, C to stop and review, then S to save or X to
+discard. X also discards an active recording. Q (or Ctrl+C) exits only when no
+recording is pending; save or explicitly discard first. The count is raw sensor
+samples, not recognized gestures. Collection stops for review after 300 seconds.
+
+The first saved recording uses `--output` exactly; later recordings use suffixes
+such as `day1-002.json`. Each gets a unique recording ID but keeps the supplied
+session ID, so recordings from one session stay in the same training split.
+Existing files are never overwritten. Discard affects only the unsaved recording.
+Recordings still need manual gesture annotations after saving.
+
+For a single timed capture that saves automatically, pass `--seconds 30`. Timed
+capture also works without an interactive terminal. A working MQTT broker and
+device telemetry publisher are required; the firmware publisher is still pending.
 
 Supply all recordings to preprocess, not only the example day1 file. Capture
 records continuous calibrated six-channel samples. Add `boundaries` entries

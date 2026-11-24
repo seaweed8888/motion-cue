@@ -61,8 +61,8 @@ twist mode and the session watchdog. Host-side tests compile these files.
 
 The exact board and sensor still need confirmation. Implement the acquisition
 task, real IMU driver, calibration and regular
-acquisition. Add actual Wi-Fi/MQTT transport around Session using the shared
-protocol. Publish mode events/status with a monotonic sequence and boot ID;
+acquisition. Add actual Wi-Fi/MQTT transport around Session using the
+[MQTT protocol](../docs/reference/mqtt-protocol.md). Publish mode events/status with a monotonic sequence and boot ID;
 call Session::tick every loop and disconnect on transport failure. Reset the
 segmenter on reconnect and never replay a captured pre-disconnect event.
 

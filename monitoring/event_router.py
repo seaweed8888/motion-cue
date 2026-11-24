@@ -13,6 +13,7 @@ class Router:
         self.history = deque(maxlen=100)
         self.mappings = {"swipe_left": "Left", "swipe_right": "Right"}
         self.broker = False
+        self.error = None
         self.boot = None
         self.reset()
 
@@ -24,9 +25,10 @@ class Router:
         self.last_seen = 0
         self.sequence = -1
 
-    def connection(self, connected):
+    def connection(self, connected, error=None):
         with self.lock:
             self.broker = connected
+            self.error = error
             self.reset()
 
     def pulse(self):
@@ -124,6 +126,6 @@ class Router:
 
     def snapshot(self):
         with self.lock:
-            return dict(broker=self.broker, online=self.online, armed=self.armed,
+            return dict(broker=self.broker, error=self.error, online=self.online, armed=self.armed,
                         pending=self.pending, mappings=self.mappings.copy(),
                         history=list(self.history), keyboard_enabled=self.keyboard.enabled)

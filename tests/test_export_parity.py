@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from sklearn.ensemble import RandomForestClassifier
 from training.export_model import export
 from .cpp import compile_cpp, run
@@ -26,3 +27,17 @@ for(float v:p)std::cout<<std::setprecision(9)<<v<<" ";std::cout<<"\\n";}}
     sorted_scores = np.sort(expected,axis=1)
     clear = sorted_scores[:,-1]-sorted_scores[:,-2] > .024
     np.testing.assert_array_equal(actual[clear].argmax(axis=1),expected[clear].argmax(axis=1))
+
+
+@pytest.mark.parametrize("threshold", [0, 1])
+def test_integer_threshold_compiles(tmp_path, threshold):
+    model = RandomForestClassifier(n_estimators=1, max_depth=1, random_state=1).fit(
+        np.zeros((4, 55)), [0, 1, 2, 3])
+    export(dict(model=model, feature_version=1, threshold=threshold, synthetic=True),
+           tmp_path/"gesture_model.h")
+    executable = compile_cpp(tmp_path, '''
+#include "gesture_model.h"
+#include <iostream>
+int main(){std::cout<<MOTIONCUE_THRESHOLD;}
+''')
+    assert float(run(executable, [])) == threshold

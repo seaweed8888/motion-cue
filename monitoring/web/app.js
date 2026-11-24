@@ -1,7 +1,8 @@
 let token;
 const el = id => document.getElementById(id);
 function render(state) {
-  el('connection').textContent = state.online ? 'Controller connected' : state.broker ? 'Broker connected · waiting for controller' : 'Broker offline';
+  el('connection').textContent = state.error ? 'MQTT stopped' : state.online ? 'Controller connected' : state.broker ? 'Broker connected · waiting for controller' : 'Broker offline';
+  el('error').textContent = state.error || '';
   el('mode').textContent = state.online ? (state.armed ? 'Armed' : 'Disarmed') : 'Offline · disarmed';
   el('output').textContent = state.keyboard_enabled ? 'Keyboard output enabled' : 'Dry run · no keys will be sent';
   el('pending').textContent = state.pending ? 'Waiting for device acknowledgement…' : '';
@@ -31,7 +32,7 @@ async function start() {
   }
   render(state);
   const stream = new EventSource('/api/stream');
-  stream.onmessage = event => { render(JSON.parse(event.data)); el('error').textContent = ''; };
+  stream.onmessage = event => { render(JSON.parse(event.data)); };
   stream.onerror = () => { el('error').textContent = 'Host connection lost. Reconnecting…'; el('arm').disabled = el('disarm').disabled = true; el('mode').textContent = 'Host offline'; };
 }
 el('arm').onclick = () => post('/api/mode', {armed:true});

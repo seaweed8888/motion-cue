@@ -39,3 +39,26 @@ std::cout<<count;}
 def test_invalid_features_and_split_leakage():
     with pytest.raises(ValueError):extract([[0]*7]*3)
     with pytest.raises(ValueError):split_events([],{"train":["a"],"validation":["a"],"test":["b"]})
+
+
+@pytest.mark.parametrize("rate", [100, 500])
+def test_segment_windows_match_firmware(tmp_path, rate):
+    samples = np.zeros((3 * rate, 7), dtype=np.float32)
+    samples[:, 0] = np.arange(len(samples)) / rate
+    samples[:, 3] = 9.81
+    samples[rate//2:3*rate//5, 4] = 2
+    expected = list(segment(samples))
+    assert len(expected) == 1
+    executable = compile_cpp(tmp_path, '''
+#include "motioncue.h"
+#include <iostream>
+#include <iomanip>
+int main(){motioncue::Segmenter s;motioncue::Sample r;
+while(std::cin>>r.t){for(float& x:r.axis)std::cin>>x;
+if(s.push(r)){for(const auto& sample:s.event){
+std::cout<<std::setprecision(9)<<sample.t;
+for(float x:sample.axis)std::cout<<" "<<x;
+std::cout<<"\\n";}}}}
+''', ["firmware/src/segmenter.cpp"])
+    actual = np.fromstring(run(executable, samples), sep=" ").reshape(-1, 7)
+    np.testing.assert_allclose(actual, expected[0], rtol=1e-7, atol=1e-7)
