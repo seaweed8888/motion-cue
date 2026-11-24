@@ -13,3 +13,4 @@ data/raw/*
 data/processed/*
 models/**/*.pkl
 /graphify-out/
+.impeccable/
