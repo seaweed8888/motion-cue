@@ -20,6 +20,68 @@ def telemetry(samples=None, **changes):
     return doc
 
 
+@pytest.mark.parametrize("axis,output,sign", [(1, 1, 1), (2, 0, 1), (4, 0, 1), (5, 1, -1), (6, 0, 1)])
+@pytest.mark.parametrize("direction", [-1, 1])
+def test_motion_follows_acceleration_and_rotation_then_centers(axis, output, sign, direction):
+    live = LiveMonitor("test", clock=lambda: 100.)
+    live.receive(telemetry())
+    rows = [[i/100, 0., 0., 9.81, 0., 0., 0.] for i in range(3, 23)]
+    for row in rows:
+        row[axis] = direction*2.
+    live.receive(telemetry(rows))
+    assert live.motion_pose()[output]*sign*direction > .01
+    assert np.linalg.norm(live.motion_pose()[:2]) <= 1.
+    live.receive(telemetry([[i/100, 0, 0, 9.81, 0, 0, 0] for i in range(23, 223)]))
+    assert live.motion_pose() == pytest.approx((0., 0., True), abs=.002)
+
+
+def test_motion_starts_neutral_at_any_tilt_and_resets_on_reconnect(monitor):
+    live, now = monitor
+    live.receive(telemetry([[i/100, 0, 6.9367, 6.9367, 0, 0, 0] for i in range(100)]))
+    assert live.motion_pose() == (0., 0., True)
+    live.receive(telemetry([[i/100, 0, 9, 6.9367, 0, 0, 0] for i in range(100, 120)]))
+    assert live.motion_pose()[0] > 0
+    now[0] += .7
+    assert abs(live.motion_pose()[0]) < .01
+    live.disconnected()
+    assert live.motion_pose() == (0., 0., False)
+    live.receive(telemetry(boot_id="new"))
+    assert live.motion_pose() == (0., 0., True)
+
+
+def test_motion_uses_all_samples_and_is_independent_of_batch_size():
+    rows = [[i/100, 0, 0, 9.81, 0, 0, 0] for i in range(120)]
+    for row in rows[3:90]:
+        row[2] = 2.
+    monitors = [LiveMonitor("test", clock=lambda: 100.) for _ in range(2)]
+    monitors[0].receive(telemetry(rows))
+    for start in range(0, len(rows), 3):
+        monitors[1].receive(telemetry(rows[start:start+3]))
+    assert monitors[0].motion_pose() == pytest.approx(monitors[1].motion_pose())
+    assert monitors[0].motion_pose()[0] > .01
+
+
+def test_motion_tracks_turn_and_settles_while_held_at_new_angle():
+    live = LiveMonitor("test", clock=lambda: 100.)
+    live.receive(telemetry())
+    rows = []
+    for i in range(3, 203):
+        angle = min(i-2, 40)/100
+        rows.append([i/100, 0, 9.81*np.sin(angle), 9.81*np.cos(angle),
+                     1. if i <= 42 else 0., 0, 0])
+    live.receive(telemetry(rows[:40]))
+    assert live.motion_pose()[0] > .2
+    live.receive(telemetry(rows[40:]))
+    assert live.motion_pose() == pytest.approx((0., 0., True), abs=.002)
+
+
+def test_slow_motion_accumulates_at_high_sample_rates():
+    live = LiveMonitor("test", clock=lambda: 100.)
+    live.receive(telemetry([[i/1000, 0, 0, 9.81, 0, 0, .1] for i in range(501)],
+                           sample_rate_hz=1000))
+    assert .05 < live.motion_pose()[0] < .1
+
+
 @pytest.fixture
 def monitor():
     now = [100.]

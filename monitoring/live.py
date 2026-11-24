@@ -32,6 +32,9 @@ class LiveMonitor:
         self.last_t = None
         self.metadata = None
         self.roll = self.pitch = self.rate = 0.
+        self._motion_t = self._gravity = self._quiet_since = None
+        self._velocity = np.zeros(2)
+        self._position = np.zeros(2)
         self.latest = None
         self.gaps = self.invalid = self.total = 0
         self.error = ""
@@ -100,6 +103,8 @@ class LiveMonitor:
             self.segmenter = Segmenter(self.acceleration_onset, self.rotation_onset)
             self.connected = False
             self.last_t = None
+            self._motion_t = self._gravity = self._quiet_since = None
+            self._velocity[:] = self._position[:] = 0
             self._generation += 1
             self._pending = None
             self.prediction, self.confidence = "Idle", None
@@ -151,6 +156,7 @@ class LiveMonitor:
                     if self.clock()-record["started"] >= 300 or len(record["samples"]) >= 300000:
                         record["state"] = "review"
                 for row in batch:
+                    self._move(row)
                     window = self.segmenter.push(row)
                     if window is not None and self.model is not None:
                         # Keep only the newest waiting window; inference must never queue telemetry.
@@ -195,6 +201,48 @@ class LiveMonitor:
                 self.predicted_at = received_at
                 self.history.appendleft(dict(gesture=self.prediction, confidence=self.confidence,
                                              time=time.strftime("%H:%M:%S")))
+
+    def _move(self, row):
+        t = float(row[0])
+        acceleration, rotation = row[1:4].astype(float), row[4:7].astype(float)
+        if self._motion_t is None:
+            self._gravity = acceleration.copy()
+            self._motion_t = t
+            return
+        dt, self._motion_t = t-self._motion_t, t
+        # Rotate gravity into the current sensor frame before removing it.
+        angle = float(np.linalg.norm(rotation))*dt
+        if angle > 0:
+            axis = rotation/np.linalg.norm(rotation)
+            gravity = self._gravity
+            self._gravity = (gravity*math.cos(angle)-np.cross(axis, gravity)*math.sin(angle)
+                             + axis*np.dot(axis, gravity)*(1-math.cos(angle)))
+        linear = acceleration-self._gravity
+        self._gravity += (1-math.exp(-dt/.5))*linear
+        quiet = np.linalg.norm(linear) < .35 and np.linalg.norm(rotation) < .08
+        self._quiet_since = (t if self._quiet_since is None else self._quiet_since) if quiet else None
+        if self._quiet_since is not None and t-self._quiet_since >= .12:
+            self._velocity[:] = 0
+            self._position *= math.exp(-dt/.12)
+            if np.linalg.norm(self._position) < .0005:
+                self._position[:] = 0
+        else:
+            # shortcut: damped sensor-plane motion, use external tracking for metric hand position.
+            self._velocity *= math.exp(-dt/.35)
+            if not quiet:
+                self._velocity += np.array([linear[1], linear[0]])*dt
+            self._position *= math.exp(-dt/3)
+            self._position += (self._velocity*8 + np.array([rotation[0]+rotation[2], -rotation[1]])/math.radians(45))*dt
+            self._position /= max(1., float(np.linalg.norm(self._position)))
+
+    def motion_pose(self):
+        """Normalized gesture position, with a return to center if samples stop arriving."""
+        with self.lock:
+            age = 0. if self.last_seen is None else self.clock()-self.last_seen
+            online = self.connected and self.last_seen is not None and age <= 1.5
+            fade = math.exp(-max(0., age-.12)/.12) if online else 0.
+            x, y = self._position*fade
+            return float(x), float(y), online
 
     def pose(self):
         """Small snapshot for the display clock, independent of inference and health formatting."""

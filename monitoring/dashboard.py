@@ -46,7 +46,7 @@ class TiltView(QWidget):
         self.clock = clock
         self.source = source
         self.setMinimumSize(260, 260)
-        self.setAccessibleName("IMU tilt ball; horizontal roll and vertical pitch")
+        self.setAccessibleName("IMU gesture ball; follows movement and centers at rest")
         self.position = QPointF()
         self.target = QPointF()
         self.online = False
@@ -56,18 +56,18 @@ class TiltView(QWidget):
         self.animation.timeout.connect(self.animate)
         self.animation.start(16)
 
-    def set_tilt(self, roll, pitch, online):
+    def set_motion(self, x, y, online):
         changed = self.online != online
         self.online = online
         if not online:
             self.trail.clear()
-        self.target = QPointF(max(-1., min(1., roll/45)), max(-1., min(1., -pitch/45))) if online else QPointF()
+        self.target = QPointF(x, y) if online else QPointF()
         if changed:
             self.update()
 
     def animate(self):
         if self.source is not None:
-            self.set_tilt(*self.source())
+            self.set_motion(*self.source())
         now = self.clock()
         had_trail = bool(self.trail)
         while self.trail and now-self.trail[0][1] >= .55:
@@ -117,9 +117,9 @@ class TiltView(QWidget):
         painter.drawLine(QPointF(center.x(), center.y()-radius-18), QPointF(center.x(), center.y()+radius+18))
         painter.setPen(QColor("#686C74"))
         painter.setFont(QFont("Segoe UI", 10))
-        painter.drawText(QRectF(area.left()+24, area.top()+20, area.width()-48, 24), "Tilt view")
+        painter.drawText(QRectF(area.left()+24, area.top()+20, area.width()-48, 24), "Gesture motion")
         painter.drawText(QRectF(area.left()+24, area.bottom()-38, area.width()-48, 24),
-                         Qt.AlignmentFlag.AlignCenter, "Roll / pitch  ·  ±45°")
+                         Qt.AlignmentFlag.AlignCenter, "Live movement  ·  Centers at rest")
         point = center + self.position*radius
         now = self.clock()
         trail = [*self.trail, (self.position, now)]
@@ -444,8 +444,8 @@ class Dashboard(QWidget):
         self.refresh()
 
     def motion_pose(self):
-        roll, pitch, online = self.monitor.pose()
-        return roll, pitch, online and self.router.broker
+        x, y, online = self.monitor.motion_pose()
+        return x, y, online and self.router.broker
 
     def apply_thresholds(self):
         self.monitor.configure(self.threshold.value(), self.acceleration.value(), self.rotation.value())
@@ -499,7 +499,7 @@ class Dashboard(QWidget):
         info = f"{live['confidence']:.0%} confidence" if active_prediction else ""
         self.prediction_info.setText(info)
         self.prediction_info.setVisible(bool(info))
-        self.tilt.set_tilt(*self.motion_pose())
+        self.tilt.set_motion(*self.motion_pose())
         self.angles.setText(f"Roll  {live['roll']:+.1f}°      Pitch  {live['pitch']:+.1f}°"
                             if live["online"] else "Roll  —      Pitch  —")
         values = {"Broker": "Connected" if host["broker"] else "Offline",

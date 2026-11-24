@@ -71,7 +71,7 @@ def test_tilt_labeled_recording_and_settings(app, settings, tmp_path, monkeypatc
     try:
         assert window.record.isEnabled()
         assert window.metrics["Telemetry"].text() == "Streaming"
-        assert window.tilt.target.x() == pytest.approx(1)
+        assert window.tilt.target.isNull()
         window.user.setText("one")
         window.session.setText("day1")
         window.record_label.setCurrentIndex(2)
@@ -136,7 +136,7 @@ def test_tilt_trail_fades_and_clears_on_disconnect(app):
     view.show()
     view.animation.stop()
     try:
-        view.set_tilt(30, 15, True)
+        view.set_motion(.6, -.3, True)
         for _ in range(20):
             now[0] += .016
             view.animate()
@@ -147,10 +147,10 @@ def test_tilt_trail_fades_and_clears_on_disconnect(app):
             now[0] += .016
             view.animate()
         assert not view.trail
-        view.set_tilt(-30, 0, True)
+        view.set_motion(-.6, 0, True)
         view.animate()
         assert view.trail
-        view.set_tilt(0, 0, False)
+        view.set_motion(0, 0, False)
         assert not view.trail and view.target.isNull()
     finally:
         view.close()
@@ -261,9 +261,11 @@ def test_ball_reads_latest_pose_without_waiting_for_health_refresh(app, settings
     window = dashboard.Dashboard(router, live, settings)
     window.timer.stop()
     try:
-        live.receive(telemetry([[t, 0, 9.81, 9.81, 0, 0, 0] for t in (0, .01, .02)]))
+        live.receive(telemetry())
+        live.receive(telemetry([[t, 0, 2, 9.81, 0, 0, 0] for t in (.03, .04, .05)]))
         window.tilt.animate()
-        assert window.tilt.position.x() == pytest.approx(1)
+        assert window.tilt.position.x() > 0
+        assert window.tilt.position.x() == pytest.approx(live.motion_pose()[0])
         assert window.tilt.online
         assert window.metrics["Telemetry"].text() == "No signal"
         now[0] += 2
@@ -295,9 +297,11 @@ def test_model_loading_leaves_ui_responsive(app, settings, monkeypatch, tmp_path
         assert started.wait(2)
         assert window.model_info.text() == "Loading model…"
         assert not window.models.isEnabled() and not window.threshold.isEnabled()
-        live.receive(telemetry([[t, 0, 9.81, 9.81, 0, 0, 0] for t in (0, .01, .02)]))
+        live.receive(telemetry())
+        live.receive(telemetry([[t, 0, 2, 9.81, 0, 0, 0] for t in (.03, .04, .05)]))
         window.tilt.animate()
-        assert window.tilt.position.x() == pytest.approx(1)
+        assert window.tilt.position.x() > 0
+        assert window.tilt.position.x() == pytest.approx(live.motion_pose()[0])
         app.processEvents()
     finally:
         release.set()

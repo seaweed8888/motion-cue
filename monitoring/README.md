@@ -4,7 +4,7 @@ Install `monitoring/requirements.txt`, then run `python monitoring/dashboard.py`
 or `python -m monitoring.dashboard` from the repository root. This opens a native
 PySide6/Qt studio, maximized on launch with normal title-bar window controls.
 Model and recording controls sit on the
-left, tilt and live gesture inference in the center, and health on the right.
+left, gesture motion and live inference in the center, and health on the right.
 You can also run `python dashboard.py` from this folder; its default
 config path does not depend on the working directory. Closing the window stops
 the MQTT listener and any local broker started by this dashboard.
@@ -26,8 +26,13 @@ laptop testing only. They do not rewrite the model or device firmware. The
 model's rejection threshold is the reset default. A fixture model is identified
 as such, and synthetic telemetry remains marked synthetic in saved recordings.
 
-The tilt ball uses accelerometer-derived roll/pitch over ±45 degrees. It is not
-a position estimate; linear acceleration can affect it while moving. Without
+The gesture ball follows gravity-compensated acceleration and gyroscope rotation,
+then smoothly returns to center after 120 ms of rest. Translation uses sensor Y
+for horizontal and sensor X for vertical movement; roll/yaw move horizontally
+and pitch vertically. Motion is bounded and damped to limit drift. This is an
+approximate 2D gesture trace, not a measured hand position. Start with the IMU
+still so its initial gravity reference is stable. Holding a tilt settles back
+to center. Without
 fresh telemetry, the ball returns to center, turns gray and its trail clears.
 The left inspector also turns gray when telemetry is inactive. Gray means off
 or idle; orange means active/live/recognized. Errors remain red. The native
@@ -36,7 +41,7 @@ Health includes broker and device state, telemetry freshness, actual timestamp
 sample rate, expected rate, gap/invalid-batch counts, inference skips and recent predictions.
 No values are fabricated when a sensor or trained model is absent.
 
-Motion reads the newest validated tilt on a separate precise 16 ms display timer;
+Motion processes every validated sample and reads the newest position on a separate precise 16 ms display timer;
 it does not wait for the 80 ms health refresh or ease toward old readings. The
 trail fades independently and the instrument stops repainting once stationary.
 Model discovery/loading and recording saves run in background workers. Prediction
