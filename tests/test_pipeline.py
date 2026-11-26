@@ -62,3 +62,35 @@ std::cout<<"\\n";}}}}
 ''', ["firmware/src/segmenter.cpp"])
     actual = np.fromstring(run(executable, samples), sep=" ").reshape(-1, 7)
     np.testing.assert_allclose(actual, expected[0], rtol=1e-7, atol=1e-7)
+
+
+@pytest.mark.parametrize("rate", [100, 500])
+def test_firmware_drops_gapped_gesture_and_recovers(tmp_path, rate):
+    samples = np.zeros((3 * rate, 7), dtype=np.float32)
+    samples[:, 0] = np.arange(len(samples)) / rate
+    samples[:, 3] = 9.81
+    samples[rate//10:rate//5, 4] = 2
+    samples[rate:11*rate//10, 4] = 2
+    samples[2*rate:21*rate//10, 4] = 2
+    # Two interrupted gestures also check that resetting preserves the sample rate.
+    missing = np.r_[np.arange(rate//5 + 2, rate//5 + 5),
+                    np.arange(11*rate//10 + 2, 11*rate//10 + 5)]
+    samples = np.delete(samples, missing, axis=0)
+    executable = compile_cpp(tmp_path, '''
+#include "motioncue.h"
+#include <cassert>
+#include <iostream>
+#include <limits>
+#include <stdexcept>
+int main(){
+for(float rate : {0.f, -1.f, 1001.f, std::numeric_limits<float>::infinity(),
+                  std::numeric_limits<float>::quiet_NaN()}){
+bool rejected=false;
+try{motioncue::Segmenter invalid(rate);}catch(const std::invalid_argument&){rejected=true;}
+assert(rejected);}
+motioncue::Segmenter s(RATE);motioncue::Sample r;int count=0;
+while(std::cin>>r.t){for(float& x:r.axis)std::cin>>x;if(s.push(r)){
+assert(s.event.front().t>1.5f);++count;}}
+std::cout<<count;}
+'''.replace("RATE", str(rate)), ["firmware/src/segmenter.cpp"])
+    assert int(run(executable, samples)) == 1

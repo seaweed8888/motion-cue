@@ -1,8 +1,10 @@
 """Record MQTT acquisition timestamps; annotate boundaries after capture."""
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -32,6 +34,7 @@ def main():
         p.error(f"Output already exists: {output}")
     config = json.loads(Path(args.config).read_text())
     samples, metadata, failures = [], {}, []
+    synthetic = False
     lock = threading.Lock()
     state = "recording" if args.seconds is not None else "idle"
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -43,6 +46,7 @@ def main():
         if not reason.is_failure:
             c.subscribe(f"motioncue/{config['device_id']}/telemetry", qos=0)
     def received(c, u, msg):
+        nonlocal synthetic
         with lock:
             if state != "recording":
                 return
@@ -60,6 +64,7 @@ def main():
                 if samples and batch[0,0] <= samples[-1][0]:
                     raise ValueError("Nonmonotonic acquisition timestamps")
                 samples.extend(batch.tolist())
+                synthetic |= bool(doc.get("synthetic", False))
             except (ValueError, KeyError, TypeError) as exc:
                 if not failures:
                     failures.append(str(exc))
@@ -73,11 +78,21 @@ def main():
         if failures or not samples:
             raise ValueError(f"Capture invalid: {failures or 'no telemetry received'}")
         doc = dict(metadata, user_id=args.user, session_id=args.session,
-                   recording_id=uuid.uuid4().hex, samples=samples, boundaries=[], synthetic=False)
+                   recording_id=uuid.uuid4().hex, samples=samples, boundaries=[], synthetic=synthetic)
         path = output if number == 1 else output.with_name(f"{output.stem}-{number:03d}{output.suffix}")
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("x") as f:
-            json.dump(doc, f)
+        temporary = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
+                                                 suffix=".partial", delete=False)
+        try:
+            with temporary as stream:
+                json.dump(doc, stream)
+            # Publish the complete file atomically without replacing an existing recording.
+            if os.name == "nt":
+                os.rename(temporary.name, path)
+            else:
+                os.link(temporary.name, path)
+        finally:
+            Path(temporary.name).unlink(missing_ok=True)
         print(f"Saved {len(samples)} samples to {path}. Add labeled boundaries before preprocessing.")
 
     client.on_connect, client.on_message = connected, received
@@ -130,6 +145,7 @@ def main():
                         samples.clear()
                         metadata.clear()
                         failures.clear()
+                        synthetic = False
                         state = "idle"
                         print("Ready. V start | Q quit")
                 elif key == "x" and state != "idle":
@@ -137,6 +153,7 @@ def main():
                     samples.clear()
                     metadata.clear()
                     failures.clear()
+                    synthetic = False
                     state = "idle"
                     print("Ready. V start | Q quit")
                 elif key == "q":

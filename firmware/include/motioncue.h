@@ -12,10 +12,13 @@ Features features(const std::vector<Sample>& samples);
 enum class MotionState { IDLE, CAPTURING, CLASSIFYING, WAIT_FOR_IDLE };
 class Segmenter {
 public:
+    // Use the acquisition rate; gaps over 2.5 sample intervals reset capture.
+    explicit Segmenter(float sample_rate_hz=100.f);
     MotionState state = MotionState::IDLE;
     bool push(const Sample& sample);
     std::vector<Sample> event;
 private:
+    float sample_rate_hz;
     bool initialized = false;
     std::array<float,3> baseline{};
     std::vector<Sample> pre;

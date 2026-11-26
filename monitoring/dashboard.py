@@ -281,7 +281,7 @@ class Dashboard(QWidget):
         right_layout.addWidget(text_label("Connection & health", "section"))
         right_layout.addWidget(text_label(router.device_id, "muted"))
         self.metrics = {}
-        for group in (("Broker", "Controller", "Telemetry"),
+        for group in (("MQTT Broker", "Controller", "Telemetry"),
                       ("Sample rate", "Expected rate", "Last sample", "Samples received"),
                       ("Data gaps", "Invalid batches", "Inference skips", "Device mode"),
                       ("Last gesture", "Confidence", "Feature version")):
@@ -502,7 +502,7 @@ class Dashboard(QWidget):
         self.tilt.set_motion(*self.motion_pose())
         self.angles.setText(f"Roll  {live['roll']:+.1f}°      Pitch  {live['pitch']:+.1f}°"
                             if live["online"] else "Roll  —      Pitch  —")
-        values = {"Broker": "Connected" if host["broker"] else "Offline",
+        values = {"MQTT Broker": "Connected" if host["broker"] else "Offline",
                   "Controller": "Connected" if host["online"] else "Waiting",
                   "Telemetry": "Streaming" if live["online"] else "No signal",
                   "Sample rate": f"{live['rate']:.1f} Hz" if live["online"] else "—",
@@ -517,7 +517,7 @@ class Dashboard(QWidget):
                   "Feature version": str(FEATURE_VERSION)}
         for name, value in values.items():
             self.metrics[name].setText(value)
-            accent = ((name in ("Broker", "Controller", "Telemetry", "Device mode")
+            accent = ((name in ("MQTT Broker", "Controller", "Telemetry", "Device mode")
                        and value in ("Connected", "Streaming", "Armed"))
                       or (name == "Sample rate" and live["online"])
                       or (name in ("Last gesture", "Confidence") and active_prediction))

@@ -1,9 +1,15 @@
 #include "motioncue.h"
 #include <cmath>
+#include <stdexcept>
 namespace motioncue {
+Segmenter::Segmenter(float rate): sample_rate_hz(rate) {
+    if(!std::isfinite(rate) || rate<=0 || rate>1000)throw std::invalid_argument("Invalid sample rate");
+}
 bool Segmenter::push(const Sample& s) {
-    if(!std::isfinite(s.t) || (initialized && s.t<=previous)) { *this=Segmenter{}; return false; }
-    for(float x:s.axis) if(!std::isfinite(x)) { *this=Segmenter{}; return false; }
+    if(!std::isfinite(s.t) || (initialized && (s.t<=previous || s.t-previous>2.5f/sample_rate_hz))) {
+        *this=Segmenter{sample_rate_hz}; return false;
+    }
+    for(float x:s.axis) if(!std::isfinite(x)) { *this=Segmenter{sample_rate_hz}; return false; }
     previous=s.t;
     if(!initialized) { for(int a=0;a<3;++a)baseline[a]=s.axis[a];initialized=true; }
     float acc=0,gyro=0;

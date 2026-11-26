@@ -157,3 +157,50 @@ def test_later_output_collision_keeps_existing_file(capture, monkeypatch, capsys
     assert output.exists() and later.read_text() == "existing data"
     text = capsys.readouterr().out
     assert "Cannot save:" in text and "Unsaved recording kept" in text
+
+
+def test_synthetic_marker_survives_mixed_batches_and_resets(capture, monkeypatch):
+    client, output = capture
+    later_batch = [[t, 0, 0, 9.81, 0, 0, 0] for t in (.03, .04, .05)]
+    script_keys(monkeypatch, client, [
+        "v", lambda: client.emit(synthetic=True),
+        lambda: client.emit(samples=later_batch), "c", "s",
+        "v", client.emit, "c", "s",
+        "v", lambda: client.emit(synthetic=True), "x",
+        "v", client.emit, "c", "s", "q",
+    ])
+    collect.main()
+    assert json.loads(output.read_text())["synthetic"] is True
+    for number in (2, 3):
+        assert json.loads(output.with_name(f"day1-{number:03d}.json").read_text())["synthetic"] is False
+
+
+def test_failed_write_keeps_capture_and_allows_retry(capture, monkeypatch, capsys):
+    client, output = capture
+    dump = json.dump
+
+    def failed_dump(doc, stream):
+        assert not output.exists()
+        stream.write('{"partial":')
+        raise OSError("disk full")
+
+    monkeypatch.setattr(collect.json, "dump", failed_dump)
+
+    def retry():
+        assert not output.exists()
+        assert not list(output.parent.glob("*.partial"))
+        monkeypatch.setattr(collect.json, "dump", dump)
+
+    script_keys(monkeypatch, client, ["v", client.emit, "c", "s", retry, "s", "q"])
+    collect.main()
+    assert len(json.loads(output.read_text())["samples"]) == 3
+    assert "disk full" in capsys.readouterr().out
+    assert not list(output.parent.glob("*.partial"))
+
+
+def test_timed_synthetic_capture_is_marked(capture, monkeypatch):
+    client, output = capture
+    monkeypatch.setattr(sys, "argv", [*sys.argv, "--seconds", "1"])
+    monkeypatch.setattr(collect.time, "sleep", lambda seconds: client.emit(synthetic=True))
+    collect.main()
+    assert json.loads(output.read_text())["synthetic"] is True

@@ -51,7 +51,7 @@ def test_offline_and_error_states(app, settings):
         copy = " ".join(label.text().lower() for label in window.findChildren(QLabel))
         for filler in ("ready when you are", "ready to record", "movement stays local", "no presentation keys are sent"):
             assert filler not in copy
-        assert window.metrics["Broker"].text() == "Offline"
+        assert window.metrics["MQTT Broker"].text() == "Offline"
         assert not window.record.isEnabled() and not window.save.isEnabled()
         assert window.stop.isHidden() and window.save.isHidden() and window.discard.isHidden()
         router.connection(False, error="MQTT worker stopped: startup failed")
